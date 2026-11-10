@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ellie - Cute Virtual Pet</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(165deg, #ffd9e2 0%, #fff0f5 55%, #ffe6ee 100%);
+      --card: rgba(255, 255, 255, 0.9);
+      --primary: #ff6584;
+      --accent: #ff8fa3;
+      --text: #452433;
+      --subtext: #8c5d73;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 14px;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      backdrop-filter: blur(25px);
+      border-radius: 36px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      padding: 20px 18px;
+      box-shadow: 0 20px 45px rgba(255, 130, 160, 0.2);
+      position: relative;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .streak-pill {
+      background: #ffffff;
+      border: 1.5px solid #ffccd5;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ff4757;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.12);
+    }
+
+    .level-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 18px;
+      box-shadow: 0 4px 12px rgba(255, 101, 132, 0.3);
+    }
+
+    /* Living Natural Pet Stage */
+    .pet-ground {
+      height: 255px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 6px 0 14px;
+    }
+
+    .speech-bubble {
+      position: absolute;
+      top: 6px;
+      background: #ffffff;
+      border: 1.5px solid #ffccd5;
+      padding: 7px 16px;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+      opacity: 0;
+      transform: translateY(8px) scale(0.95);
+      transition: all 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .speech-bubble.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .shadow-oval {
+      position: absolute;
+      bottom: 20px;
+      width: 140px;
+      height: 18px;
+      background: rgba(180, 110, 130, 0.22);
+      border-radius: 50%;
+      filter: blur(4px);
+      transition: transform 0.3s;
+    }
+
+    /* Natural Animated Baby Elephant */
+    .elephant-svg-wrap {
+      width: 195px;
+      height: 195px;
+      cursor: pointer;
+      position: relative;
+      z-index: 10;
+      animation: gentleBreathe 3.5s ease-in-out infinite;
+      transform-origin: bottom center;
+    }
+
+    @keyframes gentleBreathe {
+      0%, 100% { transform: scale(1) translateY(0); }
+      50% { transform: scale(1.02, 0.98) translateY(2px); }
+    }
+
+    .elephant-svg-wrap.happy-jump {
+      animation: jumpJoy 0.8s ease;
+    }
+
+    @keyframes jumpJoy {
+      0%, 100% { transform: translateY(0) scale(1); }
+      30% { transform: translateY(-26px) scale(1.05, 0.95); }
+      60% { transform: translateY(0) scale(0.96, 1.04); }
+      80% { transform: translateY(-8px) scale(1.02); }
+    }
+
+    /* Trunk movement */
+    .trunk-path {
+      transform-origin: 95px 95px;
+      animation: trunkIdle 3.2s ease-in-out infinite alternate;
+      transition: transform 0.3s ease;
+    }
+
+    @keyframes trunkIdle {
+      0% { transform: rotate(-3deg); }
+      50% { transform: rotate(5deg); }
+      100% { transform: rotate(-5deg); }
+    }
+
+    .trunk-chewing {
+      animation: trunkEatMove 1.4s ease-in-out !important;
+    }
+
+    @keyframes trunkEatMove {
+      0% { transform: rotate(0deg); }
+      30% { transform: rotate(25deg) translateY(-8px); }
+      60% { transform: rotate(-35deg) translateY(12px) scale(0.95); }
+      85% { transform: rotate(-15deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    /* Ear flapping */
+    .ear-left {
+      transform-origin: 65px 75px;
+      animation: earFlapL 4s ease-in-out infinite alternate;
+    }
+    .ear-right {
+      transform-origin: 125px 75px;
+      animation: earFlapR 4.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes earFlapL {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(-14deg) scaleX(1.06); }
+      100% { transform: rotate(3deg); }
+    }
+
+    @keyframes earFlapR {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(14deg) scaleX(1.06); }
+      100% { transform: rotate(-3deg); }
+    }
+
+    /* Floating Particle Effects */
+    .particle {
+      position: absolute;
+      font-size: 26px;
+      pointer-events: none;
+      z-index: 25;
+      animation: floatFade 1.2s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+    }
+
+    @keyframes floatFade {
+      0% { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-80px) scale(1.25) rotate(20deg); opacity: 0; }
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid #ffd8e0;
+      border-radius: 22px;
+      padding: 13px 16px;
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stat-title {
+      font-size: 13px;
+      font-weight: 700;
+      width: 82px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 12px;
+      background: #f5e4e8;
+      border-radius: 10px;
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .fill-hunger { background: linear-gradient(90deg, #ffa502, #ff6348); }
+    .fill-happy { background: linear-gradient(90deg, #ff758c, #ff4757); }
+    .fill-energy { background: linear-gradient(90deg, #2ed573, #1e90ff); }
+
+    .stat-val {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--subtext);
+      width: 32px;
+      text-align: right;
+    }
+
+    /* Action Buttons */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .action-btn {
+      background: #ffffff;
+      border: 1.5px solid #ffccd5;
+      border-radius: 20px;
+      padding: 12px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(255, 120, 150, 0.15);
+      transition: all 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .action-btn:active {
+      transform: scale(0.92);
+      background: #fff5f7;
+    }
+
+    .action-btn .icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .action-btn .label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="streak-pill">
+        <span>🔥</span>
+        <span>260 ရက် Streak</span>
+      </div>
+      <div class="level-badge">Lv. 12 အဆင့်</div>
+    </div>
+
+    <div class="pet-ground">
+      <div class="speech-bubble" id="speechBubble">ချစ်ဖို့ကောင်းတဲ့ ဆင်မလေးပါနော် 💖</div>
+      <div class="shadow-oval"></div>
+
+      <!-- Cute Organic SVG Baby Elephant -->
+      <div class="elephant-svg-wrap" id="elephantAvatar" onclick="handlePet()">
+        <svg viewBox="0 0 200 200" width="100%" height="100%">
+          <defs>
+            <radialGradient id="skinGrad" cx="45%" cy="40%" r="55%">
+              <stop offset="0%" stop-color="#ffd5e0" />
+              <stop offset="70%" stop-color="#f9b8c6" />
+              <stop offset="100%" stop-color="#ea9fb0" />
+            </radialGradient>
+            <radialGradient id="earInnerGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffb8cc" />
+              <stop offset="100%" stop-color="#f78da6" />
+            </radialGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#dd8799" flood-opacity="0.25"/>
+            </filter>
+          </defs>
+
+          <!-- Back Ears -->
+          <g class="ear-left">
+            <ellipse cx="50" cy="85" rx="36" ry="44" fill="url(#skinGrad)" filter="url(#softGlow)"/>
+            <ellipse cx="52" cy="86" rx="24" ry="32" fill="url(#earInnerGrad)" opacity="0.85"/>
+          </g>
+          <g class="ear-right">
+            <ellipse cx="150" cy="85" rx="36" ry="44" fill="url(#skinGrad)" filter="url(#softGlow)"/>
+            <ellipse cx="148" cy="86" rx="24" ry="32" fill="url(#earInnerGrad)" opacity="0.85"/>
+          </g>
+
+          <!-- Body -->
+          <ellipse cx="100" cy="142" rx="58" ry="44" fill="url(#skinGrad)" filter="url(#softGlow)"/>
+          
+          <!-- Feet & Toes -->
+          <ellipse cx="72" cy="172" rx="16" ry="12" fill="#f4a8b9"/>
+          <circle cx="65" cy="176" r="3" fill="#ffffff"/>
+          <circle cx="72" cy="177" r="3" fill="#ffffff"/>
+          <circle cx="79" cy="176" r="3" fill="#ffffff"/>
+
+          <ellipse cx="128" cy="172" rx="16" ry="12" fill="#f4a8b9"/>
+          <circle cx="121" cy="176" r="3" fill="#ffffff"/>
+          <circle cx="128" cy="177" r="3" fill="#ffffff"/>
+          <circle cx="135" cy="176" r="3" fill="#ffffff"/>
+
+          <!-- Belly Patch -->
+          <ellipse cx="100" cy="145" rx="34" ry="26" fill="#fff5f7" opacity="0.75"/>
+
+          <!-- Head -->
+          <circle cx="100" cy="94" r="48" fill="url(#skinGrad)" filter="url(#softGlow)"/>
+
+          <!-- Cheeks / Blush -->
+          <ellipse cx="68" cy="110" rx="9" ry="5.5" fill="#ff6584" opacity="0.45"/>
+          <ellipse cx="132" cy="110" rx="9" ry="5.5" fill="#ff6584" opacity="0.45"/>
+
+          <!-- Eyes Normal -->
+          <g id="eyesNormal">
+            <ellipse cx="76" cy="92" rx="8" ry="11" fill="#361b24"/>
+            <circle cx="74" cy="89" r="4" fill="#ffffff"/>
+            <circle cx="78" cy="96" r="2" fill="#ffffff"/>
+
+            <ellipse cx="124" cy="92" rx="8" ry="11" fill="#361b24"/>
+            <circle cx="122" cy="89" r="4" fill="#ffffff"/>
+            <circle cx="126" cy="96" r="2" fill="#ffffff"/>
+          </g>
+
+          <!-- Eyes Happy -->
+          <g id="eyesHappy" style="display: none;">
+            <path d="M 68 94 Q 76 86 84 94" stroke="#361b24" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <path d="M 116 94 Q 124 86 132 94" stroke="#361b24" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          </g>
+
+          <!-- Little Tusks -->
+          <path d="M 82 116 Q 80 128 73 130 Q 77 122 84 116 Z" fill="#ffffff"/>
+          <path d="M 118 116 Q 120 128 127 130 Q 123 122 116 116 Z" fill="#ffffff"/>
+
+          <!-- Living Animated Curved Trunk -->
+          <g class="trunk-path" id="trunkGroup">
+            <path d="M 94 104 C 94 122, 88 132, 94 144 C 98 152, 108 152, 110 144 C 112 138, 106 135, 104 136 C 102 137, 101 140, 104 142" 
+                  fill="none" 
+                  stroke="url(#skinGrad)" 
+                  stroke-width="17" 
+                  stroke-linecap="round"
+                  filter="url(#softGlow)"/>
+            <circle cx="104" cy="138" r="3" fill="#c97787"/>
+          </g>
+
+          <!-- Head Flower -->
+          <circle cx="68" cy="56" r="7" fill="#ff477e"/>
+          <circle cx="58" cy="54" r="5" fill="#ff758f"/>
+          <circle cx="78" cy="54" r="5" fill="#ff758f"/>
+          <circle cx="68" cy="56" r="3.5" fill="#ffd166"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-panel">
+      <div class="stat-row">
+        <div class="stat-title">🎋 ဆာလောင်မှု</div>
+        <div class="bar-track">
+          <div class="bar-fill fill-hunger" id="hungerBar" style="width: 75%;"></div>
+        </div>
+        <div class="stat-val" id="hungerVal">75%</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-title">💖 ပျော်ရွှင်မှု</div>
+        <div class="bar-track">
+          <div class="bar-fill fill-happy" id="happyBar" style="width: 88%;"></div>
+        </div>
+        <div class="stat-val" id="happyVal">88%</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-title">⚡ ခွန်အား</div>
+        <div class="bar-track">
+          <div class="bar-fill fill-energy" id="energyBar" style="width: 90%;"></div>
+        </div>
+        <div class="stat-val" id="energyVal">90%</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-grid">
+      <button class="action-btn" onclick="handleFeed()">
+        <span class="icon">🎋</span>
+        <span class="label">ကြံကျွေး</span>
+      </button>
+      <button class="action-btn" onclick="handlePet()">
+        <span class="icon">💖</span>
+        <span class="label">ချစ်မယ်</span>
+      </button>
+      <button class="action-btn" onclick="handleWater()">
+        <span class="icon">💦</span>
+        <span class="label">ရေကစား</span>
+      </button>
+      <button class="action-btn" onclick="handlePoke()">
+        <span class="icon">💌</span>
+        <span class="label">တို့မယ်</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    let hunger = 75;
+    let happy = 88;
+    let energy = 90;
+    let isActing = false;
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSoftBeep(frequencies, delays, type = 'sine') {
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        frequencies.forEach((f, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.16);
+          }, delays[i]);
+        });
+      } catch(e) {}
+    }
+
+    function triggerHaptic(type = 'light') {
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+      }
+    }
+
+    function showBubble(text) {
+      const b = document.getElementById('speechBubble');
+      b.innerText = text;
+      b.classList.add('active');
+      clearTimeout(window.bubbleTimeout);
+      window.bubbleTimeout = setTimeout(() => {
+        b.classList.remove('active');
+      }, 2400);
+    }
+
+    function spawnParticle(emoji) {
+      const stage = document.querySelector('.pet-ground');
+      for (let i = 0; i < 4; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.innerText = emoji;
+        p.style.left = (35 + Math.random() * 32) + '%';
+        p.style.top = (40 + Math.random() * 25) + '%';
+        stage.appendChild(p);
+        setTimeout(() => p.remove(), 1200);
+      }
+    }
+
+    function setHappyEyes(duration = 1000) {
+      document.getElementById('eyesNormal').style.display = 'none';
+      document.getElementById('eyesHappy').style.display = 'block';
+      setTimeout(() => {
+        document.getElementById('eyesNormal').style.display = 'block';
+        document.getElementById('eyesHappy').style.display = 'none';
+      }, duration);
+    }
+
+    function updateBars() {
+      document.getElementById('hungerBar').style.width = hunger + '%';
+      document.getElementById('hungerVal').innerText = hunger + '%';
+      document.getElementById('happyBar').style.width = happy + '%';
+      document.getElementById('happyVal').innerText = happy + '%';
+      document.getElementById('energyBar').style.width = energy + '%';
+      document.getElementById('energyVal').innerText = energy + '%';
+    }
+
+    function handleFeed() {
+      if (isActing) return;
+      isActing = true;
+
+      triggerHaptic('medium');
+      playSoftBeep([440, 554, 659], [0, 90, 180]);
+      spawnParticle('🎋');
+
+      const trunk = document.getElementById('trunkGroup');
+      const avatar = document.getElementById('elephantAvatar');
+
+      trunk.classList.add('trunk-chewing');
+      avatar.classList.add('happy-jump');
+      setHappyEyes(1400);
+
+      setTimeout(() => {
+        spawnParticle('✨');
+        hunger = Math.min(100, hunger + 12);
+        happy = Math.min(100, happy + 6);
+        updateBars();
+        showBubble('သကြားကြံလေး အရမ်းချိုတာပဲ 🎋😋');
+      }, 700);
+
+      setTimeout(() => {
+        trunk.classList.remove('trunk-chewing');
+        avatar.classList.remove('happy-jump');
+        isActing = false;
+      }, 1400);
+    }
+
+    function handlePet() {
+      triggerHaptic('light');
+      playSoftBeep([523, 659, 783], [0, 80, 160]);
+      spawnParticle('💖');
+      setHappyEyes(1200);
+
+      const avatar = document.getElementById('elephantAvatar');
+      avatar.classList.add('happy-jump');
+
+      happy = Math.min(100, happy + 8);
+      updateBars();
+      showBubble('အိအိလေးနဲ့ သဘောကျတယ်နော် 💖🐘');
+
+      setTimeout(() => {
+        avatar.classList.remove('happy-jump');
+      }, 800);
+    }
+
+    function handleWater() {
+      triggerHaptic('medium');
+      playSoftBeep([380, 520, 680], [0, 70, 140], 'triangle');
+      spawnParticle('💦');
+      setHappyEyes(1200);
+
+      energy = Math.min(100, energy + 10);
+      happy = Math.min(100, happy + 5);
+      updateBars();
+      showBubble('ရေမှုတ်ထုတ်ပြီး ကစားရတာ ပျော်တယ် 💦✨');
+    }
+
+    function handlePoke() {
+      triggerHaptic('rigid');
+      playSoftBeep([600, 800], [0, 100]);
+      spawnParticle('💌');
+      showBubble('သူငယ်ချင်းဆီ တို့စာလေး ပို့ပေးလိုက်ပြီ! 💌');
+    }
+  </script>
+</body>
+</html>
